@@ -1,13 +1,10 @@
 """ Python file containing some utils functions that are called in several other main scripts."""
-# Built-in library
-import time
 # third part dependencies
 import numpy as np
 import scipy.stats as stat
 from unidip import UniDip
 # Custom modules
 import profiler
-from file_params import LOG_PATH
 
 
 @profiler.sayen_logger
@@ -44,6 +41,37 @@ def spread_bool(dat):
 
 
 @profiler.sayen_logger
-def write_info(text, kind="[INFO]"):
-    with open(f"{LOG_PATH}/info.txt", "a") as f:
-        f.write(f"{kind} - {text} - ({time.asctime()}\n)")
+def unimodal_vectorised(array):
+    """ Prend un tableau numpy en argument.
+        Renvoie un tableau numpy de booléen.
+    """
+    array = np.msort(array)
+    intervals = [UniDip(array[:, i], alpha=0.05).run() for i in array.shape[1]]
+    return np.array([False if len(interval) != 1 else True for interval in intervals])
+
+
+@profiler.sayen_logger
+def spread_vectorised(array):
+    """ Description: scipy.stats.iqr(x, axis=None, rng=(25, 75), scale=1.0, nan_policy='propagate',
+    interpolation='linear', keepdims=False)
+
+    axis: int or sequence of int, optional
+
+        Axis along which the range is computed. The default is to compute the IQR for the entire array.
+"""
+    # On peut essayer :
+    IQR = stat.iqr(array, axis=0)  # voir de quelle manière il prend l'axe en compte
+
+    return IQR < 200  # devrait renvoyer un tableau de booléen
+
+
+@profiler.sayen_logger
+def quality_control(array, colonnes):
+    is_unimodal = unimodal_vectorised(array)
+    not_spread = spread_vectorised(array)
+    is_good_marker = is_unimodal & not_spread
+
+    good_marker = colonnes[is_good_marker]
+    bad_marker = [marker for marker in colonnes if marker not in good_marker]
+
+    return good_marker, bad_marker

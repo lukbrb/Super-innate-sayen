@@ -1,15 +1,17 @@
+import glob
 import os
 import shutil
-import pandas as pd
+
 import matplotlib
 import numpy as np
-import profiler
+import pandas as pd
 import seaborn as sns
-import glob
-from utils import unimodal_bool, spread_bool
 from matplotlib import pyplot as plt
 from matplotlib.pyplot import cm
-from file_params import cwd, RESULTS_PATH
+
+import profiler
+from file_params import RESULTS_PATH
+from utils import quality_control
 
 
 @profiler.sayen_logger
@@ -165,23 +167,20 @@ def plot_all(labels, names, metric, timepoints, data, animales, animals, cluster
 
             # distribution
 
-            good_markers = list()
-            bad_markers = list()
             fig, axes = plt.subplots(6, 7, figsize=(17, 18), dpi=100)
             # TODO: En faire une fonction vectorisée (prend actuellement 2h environ pour tourner ?!)
+            good_markers, bad_markers = quality_control(array=df_group_8.to_numpy(), colonnes=markers)
+
             for p, ax in zip(data, axes.flatten()):
 
-                ax.hist(df_group_8[str(p)], bins=100, density=True, alpha=0.6)
-                # on peut enlever les is True. Par défaut si a est un booléen
-                # if a: donne if True/False, rentre dans le if si a is True -> if True
-                if (unimodal_bool(df_group_8[str(p)]) is True) & (spread_bool(df_group_8[str(p)]) is True):
-                    c = 'green'
-                    good_markers.append(True)
-                else:
-                    c = 'red'
-                    bad_markers.append(False)
+                if p in good_markers:
+                    ax.hist(df_group_8[p], bins=100, density=True, alpha=0.6)
 
-                sns.kdeplot(df_group_8[str(p)], ax=ax, legend=False, c=c)
+                    sns.kdeplot(df_group_8[p], ax=ax, legend=False, c='green')
+                else:
+                    ax.hist(df_group_8[p], bins=100, density=True, alpha=0.6)
+
+                    sns.kdeplot(df_group_8[p], ax=ax, legend=False, c='red')
 
                 # ax.set_title(str(p))
 
